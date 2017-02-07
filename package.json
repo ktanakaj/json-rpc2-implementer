@@ -1,6 +1,6 @@
 {
   "name": "json-rpc2-implementer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JSON-RPC 2.0 server and client library, without any endpoints",
   "keywords": [ "JSON", "RPC", "JSON-RPC2" ],
   "homepage": "https://github.com/ktanakaj/json-rpc2-implementer",
@@ -17,14 +17,14 @@
     "url": "https://github.com/ktanakaj/json-rpc2-implementer.git"
   },
   "scripts": {
-    "build": "npm run clean-app && tsc --outDir ./dist",
-    "watch": "npm run clean-app && tsc --watch --outDir ./dist",
+    "build": "npm run clean-app && tsc --outDir ./",
+    "watch": "npm run clean-app && tsc --watch --outDir ./",
     "test": "NODE_ENV=test mocha --compilers ts:espower-typescript/guess --recursive ./test",
-    "doc": "npm run clean-doc && typedoc ./lib --out ./doc --mode file",
+    "doc": "npm run clean-doc && typedoc ./index.ts --out ./doc --mode file",
     "clean": "npm run clean-app & npm run clean-doc",
-    "clean-app": "rm -rf ./dist",
+    "clean-app": "rm -f ./index.js ./index.js.map ./index.d.ts",
     "clean-doc": "rm -rf ./doc",
-    "tslint": "tslint ./dist"
+    "tslint": "tslint ./index.ts ./test"
   },
   "dependencies": {},
   "devDependencies": {
