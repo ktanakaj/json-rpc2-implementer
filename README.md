@@ -4,7 +4,7 @@ This is [JSON-RPC 2.0](http://www.jsonrpc.org/specification) server and client i
 ## Install
 To install json-rpc2-implementer in the current directory, run:
 
-    npm install jsonrpc2
+    npm install json-rpc2-implementer
 
 ## Usage
 You must integrate json-rpc2-implementer to your application. But you can integrate every HTTP server, WebSocket server and other application.
