@@ -94,4 +94,11 @@ describe("json-rpc2-implementer", () => {
 			assert.strictEqual(response.id, null);
 		});
 	});
+
+	describe("#createResponse()", () => {
+		it("should return null result", async function () {
+			assert.deepStrictEqual(createResponse(20, null), { jsonrpc: VERSION, result: null, id: 20 });
+			assert.deepStrictEqual(createResponse("test", undefined), { jsonrpc: VERSION, result: null, id: "test" });
+		});
+	});
 });

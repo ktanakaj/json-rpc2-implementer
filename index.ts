@@ -52,7 +52,7 @@ const ServerErrorUntil = -32099;
 /**
  * JSON-RPC2のエラー情報と互換性を持たせた例外クラス。
  */
-export class JsonRpcError extends Error {
+export class JsonRpcError extends Error implements JsonRpc2ResponseError {
 	// エラーコード
 	code: number;
 	// 例外追加情報
@@ -131,7 +131,7 @@ function makeDefaultErrorMessage(code: number): string {
 		case ErrorCode.InternalError:
 			return "Internal error";
 	}
-	if (code >= -32000 && code <= -32099) {
+	if (code >= ServerErrorSince && code <= ServerErrorUntil) {
 		return "Server error";
 	}
 	return "Unknown Error";
@@ -318,7 +318,7 @@ export function createResponse(id: string | number, result: any, error?: any): J
 		}
 		res.error = error;
 	} else {
-		res.result = result;
+		res.result = result || null;
 	}
 	return res;
 }
