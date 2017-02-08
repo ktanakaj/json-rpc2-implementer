@@ -72,7 +72,7 @@ function makeDefaultErrorMessage(code) {
         case ErrorCode.InternalError:
             return "Internal error";
     }
-    if (code >= -32000 && code <= -32099) {
+    if (code >= ServerErrorSince && code <= ServerErrorUntil) {
         return "Server error";
     }
     return "Unknown Error";
@@ -206,7 +206,7 @@ function createResponse(id, result, error) {
         res.error = error;
     }
     else {
-        res.result = result;
+        res.result = result || null;
     }
     return res;
 }

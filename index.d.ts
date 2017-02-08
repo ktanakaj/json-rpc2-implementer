@@ -23,7 +23,7 @@ export declare enum ErrorCode {
     InvalidParams = -32602,
     InternalError = -32603,
 }
-export declare class JsonRpcError extends Error {
+export declare class JsonRpcError extends Error implements JsonRpc2ResponseError {
     code: number;
     data: any;
     constructor(code?: number, message?: string, data?: any);
