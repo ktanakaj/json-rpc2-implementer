@@ -2,23 +2,138 @@
  * @file index.tsのテスト。
  */
 import * as assert from "power-assert";
-import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, call, notice, receive, parseRequest, createResponse } from "../";
+import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, call, notice, receive, parse, createResponse } from "../";
 
-describe("json-rpc2-implementer", () => {
-	describe("JsonRpcError#toJSON()", () => {
+describe("JsonRpcError", () => {
+	describe("#toJSON()", () => {
 		it("should return converted JSON object", function () {
 			const e = new JsonRpcError();
 			assert.deepStrictEqual(JSON.stringify(e), JSON.stringify({ code: ErrorCode.InternalError, message: "Internal error" }));
 		});
 	});
+});
+
+describe("JsonRpc2Implementer", () => {
+	const rpc = new JsonRpc2Implementer();
 
 	describe("#call()", () => {
 		it("should call sender and callback", async function () {
 			let request;
-			const response = await call('subtract', [42, 23], (req) => {
+			rpc.sender = (msg) => {
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				request = JSON.parse(msg);
+				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
+			};
+			const result = await rpc.call('subtract', [42, 23])
+			assert.strictEqual(request.jsonrpc, VERSION);
+			assert.strictEqual(request.method, "subtract");
+			assert.deepStrictEqual(request.params, [42, 23]);
+			assert(request.id > 0);
+			assert.deepStrictEqual(result, 19);
+		});
+
+		it("should call sender and throw error", async function () {
+			let request;
+			rpc.sender = (msg) => {
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				request = JSON.parse(msg);
+				return rpc.receive(`{"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": ${request.id}}`);
+			};
+			try {
+				await rpc.call('foobar');
+				assert.fail();
+			} catch (e) {
+				assert.strictEqual(request.jsonrpc, VERSION);
+				assert.strictEqual(request.method, "foobar");
+				assert.strictEqual(request.params, undefined);
+				assert(request.id > 0);
+				assert(e instanceof JsonRpcError);
+				assert.strictEqual(e.code, -32601);
+				assert.strictEqual(e.message, "Method not found");
+			}
+		});
+	});
+
+	describe("#notice()", () => {
+		it("should call sender", async function () {
+			let request;
+			rpc.sender = (msg) => {
+				request = JSON.parse(msg);
+			};
+			const response = await rpc.notice('update', [1, 2, 3, 4, 5]);
+			assert.deepStrictEqual(request, { jsonrpc: VERSION, method: "update", params: [1, 2, 3, 4, 5] });
+		});
+	});
+
+	describe("#receive()", () => {
+		it("should call methodHandler", async function () {
+			let response, method, params, id;
+			rpc.sender = (msg) => {
+				response = JSON.parse(msg);
+			};
+			rpc.methodHandler = (m, p, i) => {
+				method = m;
+				params = p;
+				id = i;
+				return "test";
+			};
+			await rpc.receive('{"jsonrpc": "2.0", "method": "subtract", "params": [42, 23], "id": 1}');
+			assert.deepStrictEqual(response, { jsonrpc: VERSION, result: "test", id: 1 });
+			assert.strictEqual(method, "subtract");
+			assert.deepStrictEqual(params, [42, 23]);
+			assert.strictEqual(id, 1);
+		});
+
+		it("should batch call methodHandler", async function () {
+			let responses;
+			let methodArray = [];
+			let paramsArray = []
+			let idArray = [];
+			rpc.sender = (msg) => {
+				responses = JSON.parse(msg);
+			};
+			rpc.methodHandler = (m, p, i) => {
+				methodArray.push(m);
+				paramsArray.push(p);
+				idArray.push(i);
+				return "test" + m;
+			};
+			await rpc.receive('[{"jsonrpc": "2.0", "method": "sum", "params": [1,2,4], "id": "1"},{"jsonrpc": "2.0", "method": "notify_hello", "params": [7]}]');
+			assert.deepStrictEqual(responses, [{ jsonrpc: VERSION, result: "testsum", id: "1" }]);
+			assert.deepStrictEqual(methodArray, ["sum", "notify_hello"]);
+			assert.deepStrictEqual(paramsArray, [[1, 2, 4], [7]]);
+			assert.deepStrictEqual(idArray, ["1", undefined]);
+		});
+
+		it("should return error when parse failed", async function () {
+			let response;
+			rpc.sender = (msg) => {
+				response = JSON.parse(msg);
+			};
+			await rpc.receive('{"jsonrpc": ');
+			assert.strictEqual(response.jsonrpc, VERSION);
+			assert.strictEqual(response.error.code, ErrorCode.ParseError);
+			assert.strictEqual(response.error.message, "Parse error");
+			assert.strictEqual(response.id, null);
+		});
+	});
+
+	describe("#createResponse()", () => {
+		it("should return null result", async function () {
+			assert.deepStrictEqual(rpc.createResponse(20, null), { jsonrpc: VERSION, result: null, id: 20 });
+			assert.deepStrictEqual(rpc.createResponse("test", undefined), { jsonrpc: VERSION, result: null, id: "test" });
+		});
+	});
+});
+
+describe("old functions", () => {
+	describe("#call()", () => {
+		it("should call sender and callback", async function () {
+			let request;
+			const result = await call('subtract', [42, 23], (req) => {
 				request = req;
 				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
-				receive(`{"jsonrpc": "2.0", "result": 19, "id": ${req.id}}`, (req) => {
+				return receive(`{"jsonrpc": "2.0", "result": 19, "id": ${req.id}}`, (req) => {
 					assert.fail();
 				});
 			});
@@ -26,7 +141,7 @@ describe("json-rpc2-implementer", () => {
 			assert.strictEqual(request.method, "subtract");
 			assert.deepStrictEqual(request.params, [42, 23]);
 			assert(request.id > 0);
-			assert.deepStrictEqual(response, 19);
+			assert.deepStrictEqual(result, 19);
 		});
 
 		it("should call sender and throw error", async function () {
@@ -35,7 +150,7 @@ describe("json-rpc2-implementer", () => {
 				await call('foobar', undefined, (req) => {
 					request = req;
 					// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
-					receive(`{"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": ${req.id}}`, (req) => {
+					return receive(`{"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": ${req.id}}`, (req) => {
 						assert.fail();
 					});
 				});
