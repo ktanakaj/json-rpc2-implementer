@@ -1,5 +1,5 @@
 # json-rpc2-implementer
-This is [JSON-RPC 2.0](http://www.jsonrpc.org/specification) server and client implementation. json-rpc2-implementer is only formatter, parser, and wrapper. It is not included any HTTP, TCP and WebSocket endpoints.
+This is [JSON-RPC 2.0](http://www.jsonrpc.org/specification) server and client JavaScript/TypeScript implementation. json-rpc2-implementer is only formatter, parser, and wrapper. It is not included any HTTP, TCP and WebSocket endpoints.
 
 ## Install
 To install json-rpc2-implementer in the current directory, run:

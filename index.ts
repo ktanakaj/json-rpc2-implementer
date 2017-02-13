@@ -149,6 +149,8 @@ export class JsonRpc2Implementer {
 	sender: (message: string) => any | Promise<any>;
 	/** メソッド呼び出し処理 */
 	methodHandler: (method: string, params: any, id: number | string) => any | Promise<any>;
+	/** callのタイムアウト時間（ミリ秒） */
+	timeout: number = 60000;
 
 	/** JSON-RPC2リクエストID採番用カウンター */
 	protected idCounter: number = 0;
@@ -167,20 +169,35 @@ export class JsonRpc2Implementer {
 	async call(method: string, params?: any, id?: number | string): Promise<any> {
 		// リクエストを送信するとともに、結果受け取り用のコールバックをマップに保存する
 		// コールバックは、receiveがレスポンスを受信することで間接的に実行される
-		return new Promise<void>((resolve, reject) => {
+		const self = this;
+		return new Promise<any>((resolve, reject) => {
 			const req = this.createRequest(method, params);
 			this.callbackMap.set(req.id, { resolve: resolve, reject: reject });
-			// TODO: タイムアウトをチェックする
 			try {
 				const result = this.sender(JSON.stringify(req));
-				if (result instanceof Promise) {
-					result.catch((e) => {
-						this.callbackMap.delete(req.id);
-						reject(e);
-					});
+				if (isPromise(result)) {
+					result.catch(removeIdAndReject);
+				}
+				// タイムアウト処理
+				if (this.timeout > 0) {
+					setTimeout(() => {
+						if (this.callbackMap.has(req.id)) {
+							const e = new Error(`RPC response timeouted. (${JSON.stringify(req)})`);
+							e.name = "TimeoutError";
+							removeIdAndReject(e);
+						}
+					}, this.timeout);
 				}
 			} catch (e) {
-				this.callbackMap.delete(req.id);
+				removeIdAndReject(e);
+			}
+
+			/**
+			 * コールバック用マップからIDを消去しPromiseをエラーで終わる。
+			 * @param e エラー情報。
+			 */
+			function removeIdAndReject(e: any): void {
+				self.callbackMap.delete(req.id);
 				reject(e);
 			}
 		});
@@ -197,7 +214,7 @@ export class JsonRpc2Implementer {
 	async notice(method: string, params?: any): Promise<void> {
 		const req = this.createNotification(method, params);
 		const result = this.sender(JSON.stringify(req));
-		if (result instanceof Promise) {
+		if (isPromise(result)) {
 			await result;
 		}
 	}
@@ -217,7 +234,10 @@ export class JsonRpc2Implementer {
 			res = this.createResponse(null, null, e);
 		}
 		if (res) {
-			this.sender(JSON.stringify(res));
+			const result = this.sender(JSON.stringify(res));
+			if (isPromise(result)) {
+				await result;
+			}
 		}
 	}
 
@@ -266,7 +286,7 @@ export class JsonRpc2Implementer {
 				throw new JsonRpcError(ErrorCode.MethodNotFound);
 			}
 			let result = this.methodHandler(request.method, request.params, request.id);
-			if (result instanceof Promise) {
+			if (isPromise(result)) {
 				result = await result;
 			}
 			// ID無しは応答不要なので、IDがある場合のみレスポンスを返す
@@ -393,6 +413,17 @@ export class JsonRpc2Implementer {
 		}
 		return ++this.idCounter;
 	}
+}
+
+/**
+ * オブジェクトはPromiseか？
+ * @param obj チェックするオブジェクト。
+ * @returns Promiseの場合true。
+ */
+function isPromise(obj: any): boolean {
+	// bluebirdなどが有効な環境だと、instanceofだけでは正しく判定できないためその対処
+	// http://stackoverflow.com/questions/27746304/how-do-i-tell-if-an-object-is-a-promise
+	return obj instanceof Promise || (obj && typeof obj.then === 'function');
 }
 
 // ※※ 以下はVer0.21以前との互換用のメソッド。後日削除 ※※
