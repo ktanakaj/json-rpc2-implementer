@@ -19,6 +19,7 @@ var ErrorCode;
 ;
 const ServerErrorSince = -32000;
 const ServerErrorUntil = -32099;
+const MAX_INT32 = 2147483647;
 class JsonRpcError extends Error {
     constructor(code = ErrorCode.InternalError, message, data) {
         super(message || makeDefaultErrorMessage(code));
@@ -77,177 +78,239 @@ function makeDefaultErrorMessage(code) {
     }
     return "Unknown Error";
 }
-let idCounter = 0;
-const callbackMap = new Map();
-function call(method, params, sender) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => {
-            const req = createRequest(method, params);
-            callbackMap.set(req.id, { resolve: resolve, reject: reject });
+class JsonRpc2Implementer {
+    constructor() {
+        this.timeout = 60000;
+        this.idCounter = 0;
+        this.callbackMap = new Map();
+    }
+    call(method, params, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const self = this;
+            return new Promise((resolve, reject) => {
+                const req = this.createRequest(method, params);
+                this.callbackMap.set(req.id, { resolve: resolve, reject: reject });
+                try {
+                    const result = this.sender(JSON.stringify(req));
+                    if (isPromise(result)) {
+                        result.catch(removeIdAndReject);
+                    }
+                    if (this.timeout > 0) {
+                        setTimeout(() => {
+                            if (this.callbackMap.has(req.id)) {
+                                const e = new Error(`RPC response timeouted. (${JSON.stringify(req)})`);
+                                e.name = "TimeoutError";
+                                removeIdAndReject(e);
+                            }
+                        }, this.timeout);
+                    }
+                }
+                catch (e) {
+                    removeIdAndReject(e);
+                }
+                function removeIdAndReject(e) {
+                    self.callbackMap.delete(req.id);
+                    reject(e);
+                }
+            });
+        });
+    }
+    notice(method, params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const req = this.createNotification(method, params);
+            const result = this.sender(JSON.stringify(req));
+            if (isPromise(result)) {
+                yield result;
+            }
+        });
+    }
+    receive(message) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let res;
             try {
-                const result = sender(req);
-                if (result instanceof Promise) {
-                    result.catch((e) => {
-                        callbackMap.delete(req.id);
-                        reject(e);
-                    });
+                res = yield this.doMetodOrCallback(this.parse(message));
+            }
+            catch (e) {
+                res = this.createResponse(null, null, e);
+            }
+            if (res) {
+                const result = this.sender(JSON.stringify(res));
+                if (isPromise(result)) {
+                    yield result;
+                }
+            }
+        });
+    }
+    doMetodOrCallback(json) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!Array.isArray(json)) {
+                if (this.isResponse(json)) {
+                    this.doCallback(json);
+                }
+                else {
+                    return this.doMethod(json);
+                }
+            }
+            else {
+                const responses = [];
+                for (let j of json) {
+                    if (this.isResponse(j)) {
+                        this.doCallback(j);
+                    }
+                    else {
+                        const res = yield this.doMethod(j);
+                        if (res) {
+                            responses.push(res);
+                        }
+                    }
+                }
+                if (responses.length > 0) {
+                    return responses;
+                }
+            }
+        });
+    }
+    doMethod(request) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                if (!this.methodHandler) {
+                    throw new JsonRpcError(ErrorCode.MethodNotFound);
+                }
+                let result = this.methodHandler(request.method, request.params, request.id);
+                if (isPromise(result)) {
+                    result = yield result;
+                }
+                if (request.id !== undefined && request.id !== null) {
+                    return this.createResponse(request.id, result);
                 }
             }
             catch (e) {
-                callbackMap.delete(req.id);
-                reject(e);
+                return this.createResponse(request.id, null, e);
             }
+            return null;
         });
+    }
+    doCallback(response) {
+        const cb = this.callbackMap.get(response.id);
+        if (!cb) {
+            return;
+        }
+        this.callbackMap.delete(response.id);
+        if (response.error) {
+            cb.reject(new JsonRpcError(response.error.code, response.error.message, response.error.data));
+        }
+        else {
+            cb.resolve(response.result);
+        }
+    }
+    createRequest(method, params, id) {
+        if (id === null || id === undefined) {
+            id = this.generateId();
+        }
+        else if (typeof (id) !== "number") {
+            id = String(id);
+        }
+        return { jsonrpc: exports.VERSION, method: method, params: params, id: id };
+    }
+    createResponse(id, result, error) {
+        if (id === undefined || id === null) {
+            id = null;
+        }
+        else if (typeof (id) !== "number") {
+            id = String(id);
+        }
+        const res = { jsonrpc: exports.VERSION, id: id };
+        if (error) {
+            if (!(error instanceof JsonRpcError)) {
+                error = JsonRpcError.convert(error);
+            }
+            res.error = error;
+        }
+        else {
+            res.result = result || null;
+        }
+        return res;
+    }
+    createNotification(method, params) {
+        return { jsonrpc: exports.VERSION, method: method, params: params };
+    }
+    parse(message) {
+        let json;
+        try {
+            json = JSON.parse(message);
+        }
+        catch (e) {
+            throw new JsonRpcError(ErrorCode.ParseError);
+        }
+        if (!(json instanceof Object)) {
+            throw new JsonRpcError(ErrorCode.InvalidRequest);
+        }
+        if (Array.isArray(json) && json.length === 0) {
+            throw new JsonRpcError(ErrorCode.InvalidRequest);
+        }
+        return json;
+    }
+    isResponse(json) {
+        return json.result !== undefined || json.error !== undefined;
+    }
+    generateId() {
+        if (this.idCounter >= MAX_INT32) {
+            this.idCounter = 0;
+        }
+        return ++this.idCounter;
+    }
+}
+exports.JsonRpc2Implementer = JsonRpc2Implementer;
+function isPromise(obj) {
+    return obj instanceof Promise || (obj && typeof obj.then === 'function');
+}
+const impl = new JsonRpc2Implementer();
+function call(method, params, sender) {
+    return __awaiter(this, void 0, void 0, function* () {
+        impl.sender = (message) => sender(JSON.parse(message));
+        return impl.call(method, params);
     });
 }
 exports.call = call;
 function notice(method, params, sender) {
     return __awaiter(this, void 0, void 0, function* () {
-        const req = createNotification(method, params);
-        const result = sender(req);
-        if (result instanceof Promise) {
-            yield result;
-        }
+        impl.sender = (message) => sender(JSON.parse(message));
+        return yield impl.notice(method, params);
     });
 }
 exports.notice = notice;
 function receive(message, methodHandler) {
     return __awaiter(this, void 0, void 0, function* () {
-        let json;
+        impl.methodHandler = (method, params, id) => {
+            let req = { jsonrpc: exports.VERSION, method: method, params: params };
+            if (id !== undefined) {
+                req.id = id;
+            }
+            return methodHandler(req);
+        };
         try {
-            json = parse(message);
+            return yield impl.doMetodOrCallback(impl.parse(message));
         }
         catch (e) {
-            return createResponse(null, null, e);
-        }
-        if (!Array.isArray(json)) {
-            if (isResponse(json)) {
-                doCallback(json);
-            }
-            else {
-                return doMethod(json, methodHandler);
-            }
-        }
-        else {
-            const responses = [];
-            for (let j of json) {
-                if (isResponse(j)) {
-                    doCallback(j);
-                }
-                else {
-                    const res = yield doMethod(j, methodHandler);
-                    if (res) {
-                        responses.push(res);
-                    }
-                }
-            }
-            if (responses.length > 0) {
-                return responses;
-            }
+            return impl.createResponse(null, null, e);
         }
     });
 }
 exports.receive = receive;
-function doMethod(request, methodHandler) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            let result = methodHandler(request);
-            if (result instanceof Promise) {
-                result = yield result;
-            }
-            if (request.id !== undefined && request.id !== null) {
-                return createResponse(request.id, result);
-            }
-        }
-        catch (e) {
-            return createResponse(request.id, null, e);
-        }
-        return null;
-    });
-}
-function doCallback(response) {
-    const cb = callbackMap.get(response.id);
-    if (!cb) {
-        return;
-    }
-    callbackMap.delete(response.id);
-    if (response.error) {
-        cb.reject(new JsonRpcError(response.error.code, response.error.message, response.error.data));
-    }
-    else {
-        cb.resolve(response.result);
-    }
-}
-function isResponse(json) {
-    return json.result !== undefined || json.error !== undefined;
-}
 function createRequest(method, params, id) {
-    if (id === null || id === undefined) {
-        id = ++idCounter;
-    }
-    else if (typeof (id) !== "number") {
-        id = String(id);
-    }
-    return { jsonrpc: exports.VERSION, method: method, params: params, id: id };
+    return impl.createRequest(method, params, id);
 }
 exports.createRequest = createRequest;
 function createResponse(id, result, error) {
-    if (id === undefined || id === null) {
-        id = null;
-    }
-    else if (typeof (id) !== "number") {
-        id = String(id);
-    }
-    const res = { jsonrpc: exports.VERSION, id: id };
-    if (error) {
-        if (!(error instanceof JsonRpcError)) {
-            error = JsonRpcError.convert(error);
-        }
-        res.error = error;
-    }
-    else {
-        res.result = result || null;
-    }
-    return res;
+    return impl.createResponse(id, result, error);
 }
 exports.createResponse = createResponse;
 function createNotification(method, params) {
-    return { jsonrpc: exports.VERSION, method: method, params: params };
+    return impl.createNotification(method, params);
 }
 exports.createNotification = createNotification;
 function parse(message) {
-    let json;
-    try {
-        json = JSON.parse(message);
-    }
-    catch (e) {
-        throw new JsonRpcError(ErrorCode.ParseError);
-    }
-    if (!(json instanceof Object)) {
-        throw new JsonRpcError(ErrorCode.InvalidRequest);
-    }
-    if (Array.isArray(json) && json.length === 0) {
-        throw new JsonRpcError(ErrorCode.InvalidRequest);
-    }
-    return json;
+    return impl.parse(message);
 }
 exports.parse = parse;
-function parseRequest(message) {
-    return parse(message);
-}
-exports.parseRequest = parseRequest;
-function parseResponse(message) {
-    let res;
-    try {
-        res = JSON.parse(message);
-    }
-    catch (e) {
-        throw new JsonRpcError(ErrorCode.ParseError);
-    }
-    if (res === null || typeof res !== "object") {
-        throw new JsonRpcError(ErrorCode.ParseError);
-    }
-    return res;
-}
-exports.parseResponse = parseResponse;
 //# sourceMappingURL=index.js.map
