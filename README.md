@@ -1,4 +1,8 @@
 # json-rpc2-implementer
+[![NPM](https://nodei.co/npm/json-rpc2-implementer.png?downloads=true)](https://nodei.co/npm/json-rpc2-implementer/)
+[![Build Status](https://travis-ci.org/ktanakaj/json-rpc2-implementer.svg?branch=master)](https://travis-ci.org/ktanakaj/json-rpc2-implementer)
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+
 This is [JSON-RPC 2.0](http://www.jsonrpc.org/specification) server and client JavaScript/TypeScript implementation. json-rpc2-implementer is only formatter, parser, and wrapper. It is not included any HTTP, TCP and WebSocket endpoints.
 
 ## Install
