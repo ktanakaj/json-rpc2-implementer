@@ -86,6 +86,30 @@ Create a JSON-RPC2 notification request object.
 
 Parse a JSON-RPC request/response.
 
+#### rpc.sender
+* {Function}
+
+The message sender for a JSON-RPC request/response from `call()`, `notice()` and `receive()`.
+The first argument of the sender must be string and send it to the server.
+
+#### rpc.methodHandler
+* {Function}
+
+The method handler would be call from `receive()` when a JSON-RPC request received.
+The first argument of the handler must be any parameters for a JSON-RPC request's `params`.
+And also the second argument can be a ID for the request's `id`.
+
+The result of the handler would be used to the response's `result`.
+If the handler throw error, `receive()` send an error response.
+
+The handler can return the paramters that both generally value and `Promise`.
+
+#### rpc.timeout
+* {Number}
+
+The timeout specify timeout wait msec for `call()`.
+Defaults to 60000 ms.
+
 ### Class: JsonRpcError
 #### new JsonRpcError([code, message, data])
 * `code` {Number} The error code for a response. Defaults to `ErrorCode.InternalError`.
