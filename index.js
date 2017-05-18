@@ -7,6 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.VERSION = "2.0";
 var ErrorCode;
 (function (ErrorCode) {
@@ -78,6 +79,13 @@ function makeDefaultErrorMessage(code) {
     }
     return "Unknown Error";
 }
+class EndResponseError extends Error {
+    constructor() {
+        super(`response is ended`);
+        this.name = "EndResponseError";
+    }
+}
+exports.EndResponseError = EndResponseError;
 class JsonRpc2Implementer {
     constructor() {
         this.timeout = 60000;
@@ -185,7 +193,9 @@ class JsonRpc2Implementer {
                 }
             }
             catch (e) {
-                return this.createResponse(request.id, null, e);
+                if (!(e instanceof EndResponseError)) {
+                    return this.createResponse(request.id, null, e);
+                }
             }
             return null;
         });
