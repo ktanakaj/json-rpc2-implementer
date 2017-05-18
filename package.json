@@ -1,6 +1,6 @@
 {
   "name": "json-rpc2-implementer",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "JSON-RPC 2.0 server and client library, without any endpoints",
   "keywords": [ "JSON", "RPC", "JSON-RPC2" ],
   "homepage": "https://github.com/ktanakaj/json-rpc2-implementer",

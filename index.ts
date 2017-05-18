@@ -142,6 +142,19 @@ function makeDefaultErrorMessage(code: number): string {
 }
 
 /**
+ * レスポンス出力済みを通知するためのエラー。
+ */
+export class EndResponseError extends Error {
+	/**
+	 * 例外を生成する。
+	 */
+	constructor() {
+		super(`response is ended`);
+		this.name = "EndResponseError";
+	}
+}
+
+/**
  * JSON-RPC2実装クラス。
  */
 export class JsonRpc2Implementer {
@@ -294,8 +307,10 @@ export class JsonRpc2Implementer {
 				return this.createResponse(request.id, result);
 			}
 		} catch (e) {
-			// エラー時はリクエストIDの有無にかかわらず返す
-			return this.createResponse(request.id, null, e);
+			if (!(e instanceof EndResponseError)) {
+				// エラー時はリクエストIDの有無にかかわらず返す
+				return this.createResponse(request.id, null, e);
+			}
 		}
 		return null;
 	}
