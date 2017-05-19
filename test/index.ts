@@ -2,7 +2,7 @@
  * @file index.tsのテスト。
  */
 import * as assert from "power-assert";
-import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, EndResponseError, call, notice, receive, parse, createResponse } from "../";
+import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, NoResponse, call, notice, receive, parse, createResponse } from "../";
 
 describe("JsonRpcError", () => {
 	describe("#toJSON()", () => {
@@ -235,12 +235,12 @@ describe("JsonRpc2Implementer", () => {
 			assert.strictEqual(response.id, 1);
 		});
 
-		it("should't return error when methodHandler throw EndResponseError", async function () {
+		it("should't return anything when methodHandler return NoResponse", async function () {
 			rpc.sender = (msg) => {
 				assert(false, 'sender called!');
 			};
 			rpc.methodHandler = (m, p, i) => {
-				throw new EndResponseError();
+				return NoResponse;
 			};
 			await rpc.receive('{"jsonrpc": "2.0", "method": "test", "id": 1}');
 		});

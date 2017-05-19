@@ -139,9 +139,8 @@ Create a new `JsonRpcError` error instance from other Error.
 There are only few error codes that JSON-RPC2 specified [here](http://www.jsonrpc.org/specification#error_object).
 You can use other error code for your application.
 
-### Class: EndResponseError
-#### new EndResponseError()
-Create a new error instance. You can skip automatic response and send it manually in `methodHandler`.
+### Symbol: NoResponse
+You can skip automatic response and send it manually in `methodHandler`.
 
 ## Example
 You can find a example web application here.
