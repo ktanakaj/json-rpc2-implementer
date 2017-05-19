@@ -79,13 +79,7 @@ function makeDefaultErrorMessage(code) {
     }
     return "Unknown Error";
 }
-class EndResponseError extends Error {
-    constructor() {
-        super(`response is ended`);
-        this.name = "EndResponseError";
-    }
-}
-exports.EndResponseError = EndResponseError;
+exports.NoResponse = Symbol('NoResponse');
 class JsonRpc2Implementer {
     constructor() {
         this.timeout = 60000;
@@ -188,14 +182,12 @@ class JsonRpc2Implementer {
                 if (isPromise(result)) {
                     result = yield result;
                 }
-                if (request.id !== undefined && request.id !== null) {
+                if (result !== exports.NoResponse && request.id !== undefined && request.id !== null) {
                     return this.createResponse(request.id, result);
                 }
             }
             catch (e) {
-                if (!(e instanceof EndResponseError)) {
-                    return this.createResponse(request.id, null, e);
-                }
+                return this.createResponse(request.id, null, e);
             }
             return null;
         });

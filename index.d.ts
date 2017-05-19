@@ -30,9 +30,7 @@ export declare class JsonRpcError extends Error implements JsonRpc2ResponseError
     toJSON(): JsonRpc2ResponseError;
     static convert(error: any): JsonRpcError;
 }
-export declare class EndResponseError extends Error {
-    constructor();
-}
+export declare const NoResponse: symbol;
 export declare class JsonRpc2Implementer {
     sender: (message: string) => any | Promise<any>;
     methodHandler: (method: string, params: any, id: number | string) => any | Promise<any>;
