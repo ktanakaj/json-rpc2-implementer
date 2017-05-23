@@ -176,7 +176,7 @@ export class JsonRpc2Implementer {
 		// コールバックは、receiveがレスポンスを受信することで間接的に実行される
 		const self = this;
 		return new Promise<any>((resolve, reject) => {
-			const req = this.createRequest(method, params);
+			const req = this.createRequest(method, params, id);
 			this.callbackMap.set(req.id, { resolve: resolve, reject: reject });
 			try {
 				const result = this.sender(JSON.stringify(req));
