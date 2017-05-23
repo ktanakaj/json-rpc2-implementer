@@ -90,7 +90,7 @@ class JsonRpc2Implementer {
         return __awaiter(this, void 0, void 0, function* () {
             const self = this;
             return new Promise((resolve, reject) => {
-                const req = this.createRequest(method, params);
+                const req = this.createRequest(method, params, id);
                 this.callbackMap.set(req.id, { resolve: resolve, reject: reject });
                 try {
                     const result = this.sender(JSON.stringify(req));
