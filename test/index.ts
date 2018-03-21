@@ -25,11 +25,42 @@ describe("JsonRpc2Implementer", () => {
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
 			};
-			const result = await rpc.call('subtract', [42, 23])
+			const result = await rpc.call('subtract', [42, 23]);
 			assert.strictEqual(request.jsonrpc, VERSION);
 			assert.strictEqual(request.method, "subtract");
 			assert.deepStrictEqual(request.params, [42, 23]);
 			assert(request.id > 0);
+			assert.deepStrictEqual(result, 19);
+		});
+
+		it("should call sender and callback with id=string", async function () {
+			const id = 'UNITTEST1';
+			let request;
+			rpc.sender = (msg) => {
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				request = JSON.parse(msg);
+				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": "${request.id}"}`);
+			};
+			const result = await rpc.call('subtract', [42, 23], id);
+			assert.strictEqual(request.jsonrpc, VERSION);
+			assert.strictEqual(request.method, "subtract");
+			assert.deepStrictEqual(request.params, [42, 23]);
+			assert.strictEqual(id, request.id);
+			assert.deepStrictEqual(result, 19);
+		});
+
+		it("should call sender and callback with id=0", async function () {
+			let request;
+			rpc.sender = (msg) => {
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				request = JSON.parse(msg);
+				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
+			};
+			const result = await rpc.call('subtract', [42, 23], 0);
+			assert.strictEqual(request.jsonrpc, VERSION);
+			assert.strictEqual(request.method, "subtract");
+			assert.deepStrictEqual(request.params, [42, 23]);
+			assert.strictEqual(0, request.id);
 			assert.deepStrictEqual(result, 19);
 		});
 
@@ -159,7 +190,7 @@ describe("JsonRpc2Implementer", () => {
 		it("should batch call methodHandler", async function () {
 			let responses;
 			let methodArray = [];
-			let paramsArray = []
+			let paramsArray = [];
 			let idArray = [];
 			rpc.sender = (msg) => {
 				responses = JSON.parse(msg);

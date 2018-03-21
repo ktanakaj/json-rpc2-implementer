@@ -44,7 +44,7 @@ export enum ErrorCode {
 	MethodNotFound = -32601,
 	InvalidParams = -32602,
 	InternalError = -32603,
-};
+}
 
 /** サーバーエラーのコード範囲開始 */
 const ServerErrorSince = -32000;
