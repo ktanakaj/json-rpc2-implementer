@@ -17,7 +17,6 @@ var ErrorCode;
     ErrorCode[ErrorCode["InvalidParams"] = -32602] = "InvalidParams";
     ErrorCode[ErrorCode["InternalError"] = -32603] = "InternalError";
 })(ErrorCode = exports.ErrorCode || (exports.ErrorCode = {}));
-;
 const ServerErrorSince = -32000;
 const ServerErrorUntil = -32099;
 const MAX_INT32 = 2147483647;
@@ -266,53 +265,4 @@ exports.JsonRpc2Implementer = JsonRpc2Implementer;
 function isPromise(obj) {
     return obj instanceof Promise || (obj && typeof obj.then === 'function');
 }
-const impl = new JsonRpc2Implementer();
-function call(method, params, sender) {
-    return __awaiter(this, void 0, void 0, function* () {
-        impl.sender = (message) => sender(JSON.parse(message));
-        return impl.call(method, params);
-    });
-}
-exports.call = call;
-function notice(method, params, sender) {
-    return __awaiter(this, void 0, void 0, function* () {
-        impl.sender = (message) => sender(JSON.parse(message));
-        return yield impl.notice(method, params);
-    });
-}
-exports.notice = notice;
-function receive(message, methodHandler) {
-    return __awaiter(this, void 0, void 0, function* () {
-        impl.methodHandler = (method, params, id) => {
-            let req = { jsonrpc: exports.VERSION, method: method, params: params };
-            if (id !== undefined) {
-                req.id = id;
-            }
-            return methodHandler(req);
-        };
-        try {
-            return yield impl.doMetodOrCallback(impl.parse(message));
-        }
-        catch (e) {
-            return impl.createResponse(null, null, e);
-        }
-    });
-}
-exports.receive = receive;
-function createRequest(method, params, id) {
-    return impl.createRequest(method, params, id);
-}
-exports.createRequest = createRequest;
-function createResponse(id, result, error) {
-    return impl.createResponse(id, result, error);
-}
-exports.createResponse = createResponse;
-function createNotification(method, params) {
-    return impl.createNotification(method, params);
-}
-exports.createNotification = createNotification;
-function parse(message) {
-    return impl.parse(message);
-}
-exports.parse = parse;
 //# sourceMappingURL=index.js.map
