@@ -1,17 +1,18 @@
 /**
- * JSON-RPC2実装モジュール。
+ * JSON-RPC2 mounting module.
  *
- * JSON-RPC2 の仕様については以下を参照。
+ * See below for JSON-RPC2 specifications。
  * http://www.jsonrpc.org/specification
  *
- * 本モジュールでは、基本的に入力は緩く受け付け、逆に出力は規格に厳密に行う。
+ * In this module basically, the input is loosely accepted, and conversely,
+ * the output is strictly performed on the standard.
  * @module ./index
  */
 
-/** フォーマットのバージョン */
+/** Format version */
 export const VERSION = "2.0";
 
-/** リクエストJSON */
+/** Request JSON */
 export interface JsonRpc2Request {
 	jsonrpc: string;
 	method: string;
@@ -19,7 +20,7 @@ export interface JsonRpc2Request {
 	id?: number | string;
 }
 
-/** レスポンスJSON */
+/** Response JSON */
 export interface JsonRpc2Response {
 	jsonrpc: string;
 	result?: any;
@@ -27,7 +28,7 @@ export interface JsonRpc2Response {
 	id: number | string;
 }
 
-/** レスポンスJSONのエラー情報 */
+/** Response JSON error information */
 export interface JsonRpc2ResponseError {
 	code: number;
 	message: string;
@@ -35,8 +36,8 @@ export interface JsonRpc2ResponseError {
 }
 
 /**
- * JSON-RPC2規定のエラーコード。
- * ※ -32768 から -32000 は予約されているようなので通常のアプリで使わないよう注意
+ * Error code for JSON-RPC2 specified.
+ * ※ Since -32768 to -32000 is reserved, careful not to use with regular apps
  */
 export enum ErrorCode {
 	ParseError = -32700,
@@ -46,27 +47,27 @@ export enum ErrorCode {
 	InternalError = -32603,
 }
 
-/** サーバーエラーのコード範囲開始 */
+/** Starting code range of server error */
 const ServerErrorSince = -32000;
-/** サーバーエラーのコード範囲終了 */
+/** Code range of server error end */
 const ServerErrorUntil = -32099;
-/** 32bit整数の最大値 */
+/** Maximum value of 32-bit integer */
 const MAX_INT32 = 2147483647;
 
 /**
- * JSON-RPC2のエラー情報と互換性を持たせた例外クラス。
+ * Exception classes compatible with JSON-RPC2 error information.
  */
 export class JsonRpcError extends Error implements JsonRpc2ResponseError {
-	/** エラーコード */
+	/** Error code */
 	code: number;
-	/** 例外追加情報 */
+	/** Exception Additional Information */
 	data: any;
 
 	/**
-	 * 例外を生成する。
-	 * @param code エラーコード。
-	 * @param message 例外エラーメッセージ。
-	 * @param data 例外追加情報。
+	 * Generate an exception.
+	 * @param code Error code.
+	 * @param message Exception error message.
+	 * @param data Exception Additional Information.
 	 */
 	constructor(code: number = ErrorCode.InternalError, message?: string, data?: any) {
 		super(message || makeDefaultErrorMessage(code));
@@ -76,8 +77,8 @@ export class JsonRpcError extends Error implements JsonRpc2ResponseError {
 	}
 
 	/**
-	 * JSON-RPC2エラー情報形式のJSONを生成する。
-	 * @returns JSON-RPC2エラー情報。
+	 * JSON-Generate JSON in RPC2 error information format.
+	 * @returns JSON-RPC2 error information.
 	 */
 	toJSON(): JsonRpc2ResponseError {
 		const json: JsonRpc2ResponseError = {
@@ -91,9 +92,9 @@ export class JsonRpcError extends Error implements JsonRpc2ResponseError {
 	}
 
 	/**
-	 * 形式不明のエラー情報をJSON-RPC2用エラーに変換する。
-	 * @param error エラー情報。
-	 * @returns 生成したエラー。
+	 * Convert unformatted error information to JSON-RPC2 error.
+	 * @param error Error information.
+	 * @returns Generated error.
 	 */
 	static convert(error: any): JsonRpcError {
 		if (error instanceof JsonRpcError) {
@@ -118,9 +119,9 @@ export class JsonRpcError extends Error implements JsonRpc2ResponseError {
 }
 
 /**
- * エラーコードからデフォルトエラーメッセージを生成する。
- * @param code エラーコード。
- * @return エラーメッセージ。
+ * Generate a default error message from the error code.
+ * @param code Error code.
+ * @return Error message.
  */
 function makeDefaultErrorMessage(code: number): string {
 	switch (code) {
@@ -142,38 +143,38 @@ function makeDefaultErrorMessage(code: number): string {
 }
 
 /**
- * レスポンス不要を通知するためのシンボル。
+ * Symbol for notifying notification of response.
  */
 export const NoResponse = Symbol('NoResponse');
 
 /**
- * JSON-RPC2実装クラス。
+ * JSON-RPC2 implementation class.
  */
 export class JsonRpc2Implementer {
-	/** RPC送信処理 */
+	/** RPC transmission process */
 	sender: (message: string) => any | Promise<any>;
-	/** メソッド呼び出し処理 */
+	/** Method call processing */
 	methodHandler: (method: string, params: any, id: number | string) => any | Promise<any>;
-	/** callのタイムアウト時間（ミリ秒） */
+	/** CALL Timeout Time (Millisecond) */
 	timeout: number = 60000;
 
-	/** JSON-RPC2リクエストID採番用カウンター */
+	/** JSON-RPC2 Request ID Counter for Counter */
 	protected idCounter: number = 0;
-	/** callのPromise用マップ */
+	/** CALL map for Promise */
 	protected callbackMap: Map<number | string, { resolve: Function, reject: Function }> = new Map();
 
 	/**
-	 * JSON-RPC2リクエストを送信する。
+	 * Send a JSON-RPC2 request.
 	 *
-	 * ※ 事前に this.sender の登録が必要（未登録の場合エラー）。
-	 * @param method メソッド名。
-	 * @param params 引数。
-	 * @param id ID。未指定時は連番で自動生成。
-	 * @return メソッドの処理結果。
+	 * ※ Registration of this.Sender needs in advance (error if not registered).
+	 * @param method Method name.
+	 * @param params argument.
+	 * @param id ID.Automatic generation occurs in a sequence number when not specified.
+	 * @return Method processing results.
 	 */
 	async call(method: string, params?: any, id?: number | string): Promise<any> {
-		// リクエストを送信するとともに、結果受け取り用のコールバックをマップに保存する
-		// コールバックは、receiveがレスポンスを受信することで間接的に実行される
+		// Send a request and save the callback for receiving the call back to the map
+		// Callback is executed indirectly by receiving response
 		const self = this;
 		return new Promise<any>((resolve, reject) => {
 			const req = this.createRequest(method, params, id);
@@ -183,7 +184,7 @@ export class JsonRpc2Implementer {
 				if (isPromise(result)) {
 					result.catch(removeIdAndReject);
 				}
-				// タイムアウト処理
+				// Timeout processing
 				if (this.timeout > 0) {
 					setTimeout(() => {
 						if (this.callbackMap.has(req.id)) {
@@ -198,8 +199,8 @@ export class JsonRpc2Implementer {
 			}
 
 			/**
-			 * コールバック用マップからIDを消去しPromiseをエラーで終わる。
-			 * @param e エラー情報。
+			 * The ID is erased from the callback map and Promise ends with an error.
+			 * @param E error information.
 			 */
 			function removeIdAndReject(e: any): void {
 				self.callbackMap.delete(req.id);
@@ -209,12 +210,12 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * JSON-RPC2通知リクエストを送信する。
+	 * Send JSON-RPC2 notification request.
 	 *
-	 * ※ 事前に this.sender の登録が必要（未登録の場合エラー）。
-	 * @param method メソッド名。
-	 * @param params 引数。
-	 * @return 処理状態。
+	 * ※ Registration of this.Sender needs in advance (error if not registered).
+	 * @param method Method name.
+	 * @param params argument.
+	 * @return Processing state.
 	 */
 	async notice(method: string, params?: any): Promise<void> {
 		const req = this.createNotification(method, params);
@@ -225,11 +226,11 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * JSON-RPC2リクエスト/レスポンスを受け取る。
+	 * JSON-RPC2 Request / Response is received.
 	 *
-	 * ※ 事前に this.sender の登録が必要（未登録の場合エラー）。
-	 * @param message リクエスト/レスポンスのJSON文字列。
-	 * @return 処理状態。
+	 * ※ Registration of this.Sender needs in advance (error if not registered).
+	 * @param message Request / Response JSON String.
+	 * @return Processing state.
 	 */
 	async receive(message: string): Promise<void> {
 		let res;
@@ -247,21 +248,21 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * JSON-RPC2リクエスト/レスポンスを処理する。
-	 * @param json リクエスト/レスポンスのJSON。
-	 * @return レスポンスのJSONオブジェクト。バッチリクエストの場合は配列。通知やレスポンスの場合はnull。
+	 * Process JSON-RPC2 request / response.
+	 * @param json Request / Response JSON.
+	 * @return Response JSON Object.Array for batch requests.Null for notifications and responses.
 	 */
 	async doMetodOrCallback(json: JsonRpc2Request | JsonRpc2Request[] | JsonRpc2Response | JsonRpc2Response[]): Promise<JsonRpc2Response | JsonRpc2Response[]> {
-		// レスポンスの条件を満たす場合だけレスポンス、後は全てリクエストとして処理
+		// Response only if you meet the condition of the response, all processed as a request
 		if (!Array.isArray(json)) {
-			// 通常のリクエスト/レスポンス
+			// Normal request / response
 			if (this.isResponse(json)) {
 				this.doCallback(<JsonRpc2Response>json);
 			} else {
 				return this.doMethod(<JsonRpc2Request>json);
 			}
 		} else {
-			// バッチリクエスト/レスポンス
+			// Batch request / response
 			const responses = [];
 			for (let j of json) {
 				if (this.isResponse(j)) {
@@ -280,12 +281,12 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * メソッドハンドラーを実行する。
-	 * @param request リクエスト情報。
-	 * @returns レスポンス情報。
+	 * Method Run the handler.
+	 * @param request Request information.
+	 * @returns Response information.
 	 */
 	protected async doMethod(request: JsonRpc2Request): Promise<JsonRpc2Response> {
-		// メソッドハンドラーをコールして、その結果をJSON-RPC2のレスポンスにする
+		// Call method handler to make the results as JSON-RPC2 responses
 		try {
 			if (!this.methodHandler) {
 				throw new JsonRpcError(ErrorCode.MethodNotFound);
@@ -294,23 +295,23 @@ export class JsonRpc2Implementer {
 			if (isPromise(result)) {
 				result = await result;
 			}
-			// ID無しは応答不要なので、IDがある場合のみレスポンスを返す
+			// There is no ID without an ID, so returns a response only if there is an ID
 			if (result !== NoResponse && request.id !== undefined && request.id !== null) {
 				return this.createResponse(request.id, result);
 			}
 		} catch (e) {
-			// エラー時はリクエストIDの有無にかかわらず返す
+			// In response to an error, it will be returned regardless of the request ID
 			return this.createResponse(request.id, null, e);
 		}
 		return null;
 	}
 
 	/**
-	 * レスポンスのコールバックを実行する。
-	 * @param response レスポンス情報。
+	 * Run a response callback.
+	 * @param response Response information.
 	 */
 	protected doCallback(response: JsonRpc2Response): void {
-		// 該当IDのコールバックを実行する
+		// Run the callback of the corresponding ID
 		const cb = this.callbackMap.get(response.id);
 		if (!cb) {
 			return;
@@ -324,11 +325,11 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * JSON-RPC2のリクエストを生成する。
-	 * @param method メソッド名。
-	 * @param params 引数。
-	 * @param id ID。未指定時は連番で自動生成。
-	 * @returns リクエストJSONオブジェクト。
+	 * Generate a request for JSON-RPC2.
+	 * @param method Method name.
+	 * @param params argument.
+	 * @param id ID.Automatic generation occurs in a sequence number when not specified.
+	 * @returns Request JSON Object.
 	 */
 	createRequest(method: string, params?: any, id?: string | number): JsonRpc2Request {
 		if (id === null || id === undefined) {
@@ -340,11 +341,11 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * JSON-RPC2レスポンスを生成する。
-	 * @param id リクエストのID。リクエストのパース失敗などではnull。
-	 * @param result リクエストの処理結果。
-	 * @param error リクエストがエラーの場合のエラー情報。
-	 * @returns 生成したレスポンス。
+	 * Generate a JSON-RPC2 response.
+	 * @param id Request ID.NULL on request parsing failure.
+	 * @param result Processing results of requests.
+	 * @param error Error information when request is an error.
+	 * @returns Generated responses.
 	 */
 	createResponse(id: string | number, result: any, error?: any): JsonRpc2Response {
 		if (id === undefined || id === null) {
@@ -365,24 +366,24 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * JSON-RPC2の通知リクエストを生成する。
-	 * @param method メソッド名。
-	 * @param params 引数。
-	 * @returns リクエストJSONオブジェクト。
+	 * Generate a JSON-RPC2 notification request.
+	 * @param method Method name.
+	 * @param params argument.
+	 * @returns Request JSON Object.
 	 */
 	createNotification(method: string, params?: any): JsonRpc2Request {
 		return { jsonrpc: VERSION, method: method, params: params };
 	}
 
 	/**
-	 * JSON-RPC2リクエスト/レスポンスをパースする。
-	 * @param message パースするJSON文字列。
-	 * @returns パースしたリクエスト/レスポンス（バッチ実行の場合配列）。
+	 * Parse the JSON-RPC2 request / response.
+	 * @param message JSON string to parse.
+	 * @returnsPer-spared request / response (array for batch execution).
 	 */
 	parse(message: string): JsonRpc2Request | JsonRpc2Request[] | JsonRpc2Response | JsonRpc2Response[] {
-		// レスポンスの条件を満たす場合だけレスポンス、後は全てリクエストとして処理
-		// ※ 現状はJSONのパースと一括でエラーにできるチェックだけ
-		//    （ここで中身までみると、バッチが全部エラーになってしまうので）
+	// If you meet the condition of the response, it will only respond, after all after the response.
+	// * Only the current situation can be an error in the parses of JSON and collectively
+	// (If you look at the contents here, all batches will have an error)
 		let json: any;
 		try {
 			json = JSON.parse(message);
@@ -399,20 +400,20 @@ export class JsonRpc2Implementer {
 	}
 
 	/**
-	 * オブジェクトはレスポンスか？
-	 * @param json チェックするオブジェクト。
-	 * @returns レスポンスの場合true。
+	 * Is the object responding?
+	 * @param json Object to check.
+	 * @returns TRUE for response.
 	 */
 	isResponse(json: any): boolean {
 		return json.result !== undefined || json.error !== undefined;
 	}
 
 	/**
-	 * リクエスト用のIDを発行する。
-	 * @returns 生成したID。
+	 * Issue an ID for request.
+	 * @returnsGenerated ID.
 	 */
 	private generateId(): number {
-		// 安全のために、int32の正の範囲内だけ使用
+		// Use only within the positive range of INT32 for safety
 		if (this.idCounter >= MAX_INT32) {
 			this.idCounter = 0;
 		}
@@ -421,12 +422,12 @@ export class JsonRpc2Implementer {
 }
 
 /**
- * オブジェクトはPromiseか？
- * @param obj チェックするオブジェクト。
- * @returns Promiseの場合true。
+ * Is the object Promise?
+ * @param obj Object to check.
+ * @returns True for Promise.
  */
 function isPromise(obj: any): boolean {
-	// bluebirdなどが有効な環境だと、instanceofだけでは正しく判定できないためその対処
+	// If BLUEBIRD is a valid environment, INSTANCEOF can not be determined correctly only
 	// http://stackoverflow.com/questions/27746304/how-do-i-tell-if-an-object-is-a-promise
 	return obj instanceof Promise || (obj && typeof obj.then === 'function');
 }

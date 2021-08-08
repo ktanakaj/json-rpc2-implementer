@@ -1,5 +1,5 @@
 /**
- * @file index.tsのテスト。
+ * @file index.ts test.
  */
 import * as assert from "power-assert";
 import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, NoResponse, call, notice, receive, parse, createResponse } from "../";
@@ -21,7 +21,7 @@ describe("JsonRpc2Implementer", () => {
 		it("should call sender and callback", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// Actually, because Receive is called from outside, the call here manually
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
 			};
@@ -37,7 +37,7 @@ describe("JsonRpc2Implementer", () => {
 			const id = 'UNITTEST1';
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// Actually, because Receive is called from outside, the call here manually
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": "${request.id}"}`);
 			};
@@ -52,7 +52,7 @@ describe("JsonRpc2Implementer", () => {
 		it("should call sender and callback with id=0", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// Actually, because Receive is called from outside, the call here manually
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
 			};
@@ -67,7 +67,7 @@ describe("JsonRpc2Implementer", () => {
 		it("should call sender and throw error", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// Actually, because Receive is called from outside, the call here manually
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": ${request.id}}`);
 			};
@@ -88,7 +88,7 @@ describe("JsonRpc2Implementer", () => {
 		it("should throw error when timeout", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// ※ resolveを呼ばない終わらないPromiseを返す
+				// ※ Return Promise that does not end with resolve
 				request = JSON.parse(msg);
 				return new Promise((resolve) => { });
 			};
