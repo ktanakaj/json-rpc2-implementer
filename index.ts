@@ -2,7 +2,7 @@
  * JSON-RPC2 mounting module.
  *
  * See below for JSON-RPC2 specifications。
- * http://www.jsonrpc.org/specification
+ * https://www.jsonrpc.org/specification
  *
  * In this module basically, the input is loosely accepted, and conversely,
  * the output is strictly performed on the standard.
@@ -428,6 +428,6 @@ export class JsonRpc2Implementer {
  */
 function isPromise(obj: any): boolean {
 	// If BLUEBIRD is a valid environment, INSTANCEOF can not be determined correctly only
-	// http://stackoverflow.com/questions/27746304/how-do-i-tell-if-an-object-is-a-promise
+	// https://stackoverflow.com/questions/27746304/how-do-i-tell-if-an-object-is-a-promise
 	return obj instanceof Promise || (obj && typeof obj.then === 'function');
 }
