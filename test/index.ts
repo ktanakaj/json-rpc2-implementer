@@ -2,7 +2,7 @@
  * @file index.ts test.
  */
 import * as assert from "power-assert";
-import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, NoResponse, call, notice, receive, parse, createResponse } from "../";
+import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, NoResponse } from "../index.js";
 
 describe("JsonRpcError", () => {
 	describe("#toJSON()", () => {

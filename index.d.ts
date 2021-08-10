@@ -21,7 +21,7 @@ export declare enum ErrorCode {
     InvalidRequest = -32600,
     MethodNotFound = -32601,
     InvalidParams = -32602,
-    InternalError = -32603,
+    InternalError = -32603
 }
 export declare class JsonRpcError extends Error implements JsonRpc2ResponseError {
     code: number;
@@ -51,5 +51,5 @@ export declare class JsonRpc2Implementer {
     createNotification(method: string, params?: any): JsonRpc2Request;
     parse(message: string): JsonRpc2Request | JsonRpc2Request[] | JsonRpc2Response | JsonRpc2Response[];
     isResponse(json: any): boolean;
-    private generateId();
+    private generateId;
 }
