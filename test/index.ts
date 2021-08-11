@@ -1,8 +1,8 @@
 /**
- * @file index.tsのテスト。
+ * @file test for index.ts。
  */
 import * as assert from "power-assert";
-import { JsonRpc2Response, VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, NoResponse, call, notice, receive, parse, createResponse } from "../";
+import { VERSION, JsonRpcError, ErrorCode, JsonRpc2Implementer, NoResponse } from "../";
 
 describe("JsonRpcError", () => {
 	describe("#toJSON()", () => {
@@ -21,7 +21,8 @@ describe("JsonRpc2Implementer", () => {
 		it("should call sender and callback", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// The receive method is called outside the library. Call manually for unit test.
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール。
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
 			};
@@ -37,7 +38,8 @@ describe("JsonRpc2Implementer", () => {
 			const id = 'UNITTEST1';
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// The receive method is called outside the library. Call manually for unit test.
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール。
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": "${request.id}"}`);
 			};
@@ -52,7 +54,8 @@ describe("JsonRpc2Implementer", () => {
 		it("should call sender and callback with id=0", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// The receive method is called outside the library. Call manually for unit test.
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール。
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "result": 19, "id": ${request.id}}`);
 			};
@@ -67,7 +70,8 @@ describe("JsonRpc2Implementer", () => {
 		it("should call sender and throw error", async function () {
 			let request;
 			rpc.sender = (msg) => {
-				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール
+				// The receive method is called outside the library. Call manually for unit test.
+				// 実際は外部からreceiveが呼ばれるので、ここでは手動でコール。
 				request = JSON.parse(msg);
 				return rpc.receive(`{"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": ${request.id}}`);
 			};
@@ -88,6 +92,7 @@ describe("JsonRpc2Implementer", () => {
 		it("should throw error when timeout", async function () {
 			let request;
 			rpc.sender = (msg) => {
+				// * return invalid Promise that don't call resolve.
 				// ※ resolveを呼ばない終わらないPromiseを返す
 				request = JSON.parse(msg);
 				return new Promise((resolve) => { });
