@@ -12,7 +12,7 @@
 coverage
 node_modules
 doc
-.travis.yml
+.github
 tslint.json
 index.ts
 test/
